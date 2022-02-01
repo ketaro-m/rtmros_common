@@ -510,26 +510,30 @@
   (send *ri* :waitinterpolation-of-group "larm")
 |#
   (:set-ref-forces-moments
-   (force-list moment-list tm)
-   "Set reference wrenches. wrench-list is list of wrench ([N],[Nm]) for all end-effectors. tm is interpolation time [ms]."
-   (send self :sequenceplayerservice_setwrenches :wrenches (apply #'concatenate float-vector (mapcan #'(lambda (f m) (list f m)) force-list moment-list)) :tm (* 1e-3 tm)) ;; [ms]->[s]
+   (force-list moment-list tm &optional (active-limb-flag 0))
+   "Set reference wrenches. wrench-list is list of wrench ([N],[Nm]) for all end-effectors. tm is interpolation time [ms].
+    active-limb-flag should be 0->all, 1->legs, 2->arms"
+   (send self :sequenceplayerservice_setwrenches :wrenches (apply #'concatenate float-vector (mapcan #'(lambda (f m) (list f m)) force-list moment-list)) :tm (* 1e-3 tm) :active_limb_flag active-limb-flag) ;; [ms]->[s]
    )
   (:set-ref-forces
-   (force-list tm &key (update-robot-state t))
-   "Set reference forces. force-list is list of force ([N]) for all end-effectors. tm is interpolation time [ms]."
+   (force-list tm &key (update-robot-state t) (active-limb-flag 0))
+   "Set reference forces. force-list is list of force ([N]) for all end-effectors. tm is interpolation time [ms].
+    active-limb-flag should be 0->all, 1->legs, 2->arms"
    (if update-robot-state (send self :state))
-   (send self :set-ref-forces-moments force-list (send self :reference-moment-vector) tm)
+   (send self :set-ref-forces-moments force-list (send self :reference-moment-vector) tm active-limb-flag)
    )
   (:set-ref-moments
-   (moment-list tm &key (update-robot-state t))
-   "Set reference moments. moment-list is list of moment ([Nm]) for all end-effectors. tm is interpolation time [ms]."
+   (moment-list tm &key (update-robot-state t) (active-limb-flag 0))
+   "Set reference moments. moment-list is list of moment ([Nm]) for all end-effectors. tm is interpolation time [ms].
+    active-limb-flag should be 0->all, 1->legs, 2->arms"
    (if update-robot-state (send self :state))
-   (send self :set-ref-forces-moments (send self :reference-force-vector) moment-list tm)
+   (send self :set-ref-forces-moments (send self :reference-force-vector) moment-list tm active-limb-flag)
    )
   (:set-ref-force-moment
-   (force moment tm &optional (limb :arms) &key (update-robot-state t))
+   (force moment tm &optional (limb :arms) &key (update-robot-state t) (active-limb-flag 0))
    "Set reference force [N] and moment [Nm]. tm is interpolation time [ms].
-    limb should be limb symbol name such as :rarm, :larm, :rleg, :lleg, :arms, or :legs."
+    limb should be limb symbol name such as :rarm, :larm, :rleg, :lleg, :arms, or :legs.
+    active-limb-flag should be 0->all, 1->legs, 2->arms"
    (if update-robot-state (send self :state))
    (let ((limbs (case limb
 		  (:arms (list :rarm :larm))
@@ -544,12 +548,14 @@
                        (if (find-if #'(lambda (l) (equal fs (car (send robot l :force-sensors)))) limbs)
                            moment rfv))
                    (send robot :force-sensors) (send self :reference-moment-vector))
-           tm)
+           tm
+           active-limb-flag)
      ))
   (:set-ref-force
-   (force tm &optional (limb :arms) &key (update-robot-state t))
+   (force tm &optional (limb :arms) &key (update-robot-state t) (active-limb-flag 0))
    "Set reference force [N]. tm is interpolation time [ms].
-    limb should be limb symbol name such as :rarm, :larm, :rleg, :lleg, :arms, or :legs."
+    limb should be limb symbol name such as :rarm, :larm, :rleg, :lleg, :arms, or :legs.
+    active-limb-flag should be 0->all, 1->legs, 2->arms"
    (if update-robot-state (send self :state))
    (let ((limbs (case limb
                       (:arms (list :rarm :larm))
@@ -560,12 +566,14 @@
                        (if (find-if #'(lambda (l) (equal fs (car (send robot l :force-sensors)))) limbs)
                            force rfv))
                    (send robot :force-sensors) (send self :reference-force-vector))
-           tm)
+           tm
+           :active-limb-flag active-limb-flag)
      ))
   (:set-ref-moment
-   (moment tm &optional (limb :arms) &key (update-robot-state t))
+   (moment tm &optional (limb :arms) &key (update-robot-state t) (active-limb-flag 0))
    "Set reference moment [Nm]. tm is interpolation time [ms].
-    limb should be limb symbol name such as :rarm, :larm, :rleg, :lleg, :arms, or :legs."
+    limb should be limb symbol name such as :rarm, :larm, :rleg, :lleg, :arms, or :legs.
+    active-limb-flag should be 0->all, 1->legs, 2->arms"
    (if update-robot-state (send self :state))
    (let ((limbs (case limb
                       (:arms (list :rarm :larm))
@@ -576,7 +584,8 @@
                        (if (find-if #'(lambda (l) (equal fs (car (send robot l :force-sensors)))) limbs)
                            moment rfv))
                    (send robot :force-sensors) (send self :reference-moment-vector))
-           tm)
+           tm
+           :active-limb-flag active-limb-flag)
      ))
   (:angle-vector-sequence-full
    (jpos tm
